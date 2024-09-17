@@ -7,7 +7,7 @@
 | **Group Name**                                                               | ? |
 | **Semester Duration**                                                 | 19<sup>th</sup> August - 25<sup>th</sup> November 2024                                                                                                                       |
 
-## Flowchart
+## Flowchart //to  understand the transaction
                                      +-------------------+
 |  Begin Transaction  |
 +-------------------+
@@ -75,7 +75,7 @@
 +-------------------+
 |  End              |
 +-------------------+
-## Pseudocode
+## Pseudocode // to understand the transaction
 Use database `classicmodels`
 Begin Transaction
 Calculate Latest Order Number
@@ -99,3 +99,59 @@ Commit Transaction
 End
 
 ## Support for the Sales Departments' Report
+procedure create_new_order(customer_id, product_ids):
+    begin transaction;
+
+    -- Calculate the latest order number
+    set latest_order_number = (select max(orderNumber) from orders);
+    set new_order_number = latest_order_number + 1;
+
+    -- Create a new order
+    insert into orders (orderNumber, customerNumber, orderDate, requiredDate, shippedDate, status, comments)
+    values (new_order_number, customer_id, current_date, current_date + 30, null, 'Processing', '');
+
+    -- Insert the first product
+    insert into orderdetails (orderNumber, productCode, quantityOrdered, priceEach, orderLineNumber)
+    values (new_order_number, product_ids[1], 1, (select price from products where productCode = product_ids[1]), 1);
+
+    -- Update the product's quantity in stock
+    update products
+    set quantityInStock = quantityInStock - 1
+    where productCode = product_ids[1];
+
+    -- Optional: Create a savepoint before adding the second product
+    savepoint before_second_product;
+
+    -- Insert the second product (potentially rolled back)
+    insert into orderdetails (orderNumber, productCode, quantityOrdered, priceEach, orderLineNumber)
+    values (new_order_number, product_ids[2], 1, (select price from products where productCode = product_ids[2]), 2);
+
+    -- Update the product's quantity in stock (potentially rolled back)
+    update products
+    set quantityInStock = quantityInStock - 1
+    where productCode = product_ids[2];
+
+    -- Roll back to the savepoint if necessary
+    if <condition to roll back> then
+        rollback to savepoint before_second_product;
+    end if;
+
+    -- Insert the third product
+    insert into orderdetails (orderNumber, productCode, quantityOrdered, priceEach, orderLineNumber)
+    values (new_order_number, product_ids[3], 1, (select price from products where productCode = product_ids[3]), 3);
+
+    -- Update the product's quantity in stock
+    update products
+    set quantityInStock = quantityInStock - 1
+    where productCode = product_ids[3];
+
+    -- Insert the payment (assuming a simple payment model)
+    insert into payments (customerNumber, checkNumber, paymentDate, amount, invoiceNumber)
+    values (customer_id, 'CHECK001', current_date, (select sum(priceEach * quantityOrdered) from orderdetails where orderNumber = new_order_number), new_order_number);
+
+    -- Commit the transaction
+    commit;
+
+    -- Select order details for the created order
+    select * from orderdetails where orderNumber = new_order_number;
+end procedure;
