@@ -4,7 +4,8 @@
 
 | **Key**                                                               | Value                                                                                                                                                                              |
 |---------------|---------------------------------------------------------|
-| **Group Name**                                                               | ? |
+| **Group Name**   
+GROUP C3                                                            | ? |
 | **Semester Duration**                                                 | 19<sup>th</sup> August - 25<sup>th</sup> November 2024                                                                                                                       |
 
 ## Flowchart //to  understand the transaction
@@ -155,3 +156,22 @@ procedure create_new_order(customer_id, product_ids):
     -- Select order details for the created order
     select * from orderdetails where orderNumber = new_order_number;
 end procedure;
+
+//suppose the sales deprtment accpets paymentsin installments
+SELECT 
+    o.orderNumber,
+    o.customerNumber,
+    SUM(od.quantityOrdered * od.priceEach) AS total_order_amount,
+    SUM(op.payment_amount) AS total_payments,
+    SUM(od.quantityOrdered * od.priceEach) - SUM(op.payment_amount) AS balance_due
+FROM
+    orders o
+JOIN
+    orderdetails od ON o.orderNumber = od.orderNumber
+LEFT JOIN
+    order_payments op ON o.orderNumber = op.order_id
+GROUP BY
+    o.orderNumber,
+    o.customerNumber
+HAVING
+    SUM(od.quantityOrdered * od.priceEach) - SUM(op.payment_amount) > 0;
